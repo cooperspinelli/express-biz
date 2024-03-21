@@ -23,6 +23,7 @@ router.get('/', async function (req, res, next) {
  * company: {code, name, description}}
  * If invoice cannot be found, returns 404
  */
+//TODO: Refactor to JOIN query
 router.get('/:id', async function (req, res, next) {
   const id = req.params.id;
 
@@ -104,6 +105,25 @@ router.put('/:id', async function (req, res, next) {
   }
 
   return res.json({ invoice });
+});
+
+/**
+ * Deletes an invoice given an id
+ * Returns: {status: "deleted"} or 404 if invoice wasn't found
+ */
+router.delete('/:id', async function (req, res, next) {
+
+  const result = await db.query(
+    "DELETE FROM invoices WHERE id = $1 RETURNING id",
+    [req.params.id],
+  );
+
+  if (!result.rows[0]) {
+    throw new NotFoundError();
+  }
+
+  return res.json({ status: "deleted" });
+
 });
 
 

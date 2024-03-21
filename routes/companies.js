@@ -17,7 +17,7 @@ router.get("/", async function (req, res, next) {
 });
 
 /** Returns json containing comapny whose cade matches the url parameter:
- * {company: {code, name, description}} */
+ * {company: {code, name, description, invoices: [id, ...]}} */
 router.get("/:code", async function (req, res, next) {
   const companyCode = req.params.code;
   const results = await db.query(
@@ -29,6 +29,13 @@ router.get("/:code", async function (req, res, next) {
   if (!company) {
     throw new NotFoundError();
   }
+
+  const invoices = await db.query(
+    `SELECT id, comp_code, amt, paid, add_date, paid_date
+      FROM invoices
+      WHERE comp_code =$1`, [company.code]
+  );
+  company.invoices = invoices.rows;
 
   return res.json({ company });
 });
