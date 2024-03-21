@@ -13,37 +13,4 @@ let db = new Client({
 db.connect();
 
 
-async function getCompanies() {
-  const results = await db.query(
-    `SELECT code, name
-         FROM companies`);
-  return results.rows;
-}
-
-async function getCompany(companyCode) {
-  const results = await db.query(
-    `SELECT code, name
-         FROM companies
-         WHERE code = $1`, [companyCode]);
-  return results.rows[0];
-}
-
-async function addCompany(newCompany) {
-  try {
-    const results = await db.query(
-      `INSERT INTO companies (code, name, description)
-    VALUES ($1, $2, $3)
-    RETURNING code, name, description`,
-      [newCompany.code, newCompany.name, newCompany.description],
-    );
-  } catch {
-
-  }
-  return results.rows[0];
-}
-
-
-
-
-
 module.exports = db;
