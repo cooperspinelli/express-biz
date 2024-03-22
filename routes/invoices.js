@@ -28,8 +28,9 @@ router.get('/:id', async function (req, res, next) {
   const id = req.params.id;
 
   const invResults = await db.query(
-    `SELECT id, amt, paid, add_date, paid_date, comp_code
-          FROM invoices
+    `SELECT id, amt, paid, add_date, paid_date, comp_code, name, description
+          FROM invoices i
+          JOIN companies c ON i.comp_code = c.code
           WHERE id=$1`, [id]);
   const invoice = invResults.rows[0];
 
@@ -37,15 +38,21 @@ router.get('/:id', async function (req, res, next) {
     throw new NotFoundError();
   }
 
-  const compResults = await db.query(
-    `SELECT code, name, description
-      FROM companies
-      WHERE code= $1`, [invoice.comp_code]);
-  const company = compResults.rows[0];
+  const returnData = {
+    invoice: {
+      id: invoice.id,
+      amt: invoice.amt,
+      paid: invoice.paid,
+      add_date: invoice.add_date,
+      paid_date: invoice.paid_date,
+      company: {
+        name: invoice.name,
+        descrition: invoice.description
+      }
+    }
+  };
 
-  invoice.company = company;
-  delete invoice.comp_code;
-  return res.json({ invoice });
+  return res.json(returnData);
 });
 
 
@@ -85,18 +92,28 @@ router.post('/', async function (req, res, next) {
  */
 router.put('/:id', async function (req, res, next) {
   const invoiceId = req.params.id;
-  const { amt } = req.body;
+  const { amt, paid } = req.body;
 
-  if (amt === undefined) {
+  if (amt === undefined || paid === undefined) {
     throw new BadRequestError();
   }
 
   const result = await db.query(
     `UPDATE invoices
-      SET amt=$1
-      WHERE id=$2
-      RETURNING id, comp_code, amt, paid, add_date, paid_date`,
-    [Number(amt), invoiceId]);
+    SET amt = $1,
+        paid_date = (CASE
+          WHEN paid = FALSE AND $2 = TRUE THEN CURRENT_DATE
+          WHEN paid = TRUE AND $2 = FALSE THEN NULL
+          ELSE paid_date
+        END),
+        paid = (CASE
+          WHEN $2 = TRUE THEN TRUE
+          WHEN $2 = FALSE THEN FALSE
+          ELSE paid
+        END)
+      WHERE id= $3
+      RETURNING id, comp_code, amt, paid, add_date, paid_date;`,
+    [Number(amt), paid === "true", invoiceId]);
 
   const invoice = result.rows[0];
 
