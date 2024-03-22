@@ -101,16 +101,12 @@ router.put('/:id', async function (req, res, next) {
   const result = await db.query(
     `UPDATE invoices
     SET amt = $1,
+        paid = $2,
         paid_date = (CASE
           WHEN paid = FALSE AND $2 = TRUE THEN CURRENT_DATE
           WHEN paid = TRUE AND $2 = FALSE THEN NULL
           ELSE paid_date
         END),
-        paid = (CASE
-          WHEN $2 = TRUE THEN TRUE
-          WHEN $2 = FALSE THEN FALSE
-          ELSE paid
-        END)
       WHERE id= $3
       RETURNING id, comp_code, amt, paid, add_date, paid_date;`,
     [Number(amt), paid === "true", invoiceId]);
